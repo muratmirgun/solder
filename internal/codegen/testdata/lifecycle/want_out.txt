@@ -1,0 +1,5 @@
+built
+logger start
+server start
+server stop
+logger stop

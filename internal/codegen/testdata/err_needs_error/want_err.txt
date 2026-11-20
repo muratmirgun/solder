@@ -1,0 +1,1 @@
+inject.go:7:50: NewAErr returns an error, so injector Inj must return an error too

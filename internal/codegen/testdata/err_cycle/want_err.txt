@@ -1,0 +1,4 @@
+dependency cycle through example.com/app.A
+	needed by main.NewB (inject.go:7:56)
+	needed by main.NewA (inject.go:7:50)
+	needed by injector Inj (inject.go:7:6)
