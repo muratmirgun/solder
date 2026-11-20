@@ -1,0 +1,2 @@
+inject.go:7:83: example.com/app.A is provided twice
+	also provided at inject.go:7:59

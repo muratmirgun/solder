@@ -1,0 +1,1 @@
+inject.go:7:49: solder.Supply(5): untyped constant has no type to provide; convert it, e.g. Supply(MyType(5))

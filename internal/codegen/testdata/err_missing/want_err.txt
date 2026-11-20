@@ -1,0 +1,3 @@
+no provider for example.com/app.B
+	needed by main.NewA (inject.go:7:50)
+	needed by injector Inj (inject.go:7:6)

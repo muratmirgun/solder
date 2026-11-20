@@ -1,0 +1,1 @@
+inject.go:7:6: solder.Invoke(Use) is used, so injector Inj must return *solder.App
