@@ -1,0 +1,9 @@
+%% injector NewPoolApp (inject.go:11:6)
+flowchart LR
+  n1["supply maxConns"]
+  n2["supply 3 * time.Second"]
+  n3["main.NewPool"]
+  n1 --> n3
+  n2 --> n3
+  n3 --> result((NewPoolApp))
+

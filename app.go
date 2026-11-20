@@ -14,6 +14,30 @@ import (
 type Hook struct {
 	OnStart func(context.Context) error
 	OnStop  func(context.Context) error
+	svc     any // from AppendService: its methods are called directly, so no closure is allocated
+}
+
+type starter interface{ Start(context.Context) error }
+type stopper interface{ Stop(context.Context) error }
+
+func (h *Hook) start(ctx context.Context) error {
+	if h.OnStart != nil {
+		return h.OnStart(ctx)
+	}
+	if s, ok := h.svc.(starter); ok {
+		return s.Start(ctx)
+	}
+	return nil
+}
+
+func (h *Hook) stop(ctx context.Context) error {
+	if h.OnStop != nil {
+		return h.OnStop(ctx)
+	}
+	if s, ok := h.svc.(stopper); ok {
+		return s.Stop(ctx)
+	}
+	return nil
 }
 
 // Lifecycle is what providers receive to register hooks.
@@ -27,11 +51,16 @@ type Lifecycle interface {
 // then Start and Stop are called from one goroutine.
 type App struct {
 	hooks   []Hook
-	started int // hooks[:started] have run OnStart successfully
+	started int     // hooks[:started] have run OnStart successfully
+	buf     [8]Hook // backing array for the first hooks, so typical apps allocate only the App
 }
 
 // New returns an empty App. Generated injectors call it.
-func New() *App { return &App{} }
+func New() *App {
+	a := &App{}
+	a.hooks = a.buf[:0]
+	return a
+}
 
 var _ Lifecycle = (*App)(nil)
 
@@ -39,17 +68,21 @@ var _ Lifecycle = (*App)(nil)
 // reverse.
 func (a *App) Append(h Hook) { a.hooks = append(a.hooks, h) }
 
+// AppendService registers svc's Start(context.Context) error and
+// Stop(context.Context) error methods, whichever it has, as a hook. Unlike
+// Append(Hook{OnStart: svc.Start}) it does not allocate. Generated code uses it
+// for solder.Lifecycled.
+func (a *App) AppendService(svc any) { a.hooks = append(a.hooks, Hook{svc: svc}) }
+
 // Start runs every OnStart in order. If one fails, the hooks that already
 // started are stopped in reverse and both errors are returned.
 func (a *App) Start(ctx context.Context) error {
 	for a.started < len(a.hooks) {
-		if f := a.hooks[a.started].OnStart; f != nil {
-			if err := f(ctx); err != nil {
-				// ctx may be why start failed (deadline), so the rollback gets its own.
-				stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), hookTimeout)
-				defer cancel()
-				return errors.Join(err, a.Stop(stopCtx))
-			}
+		if err := a.hooks[a.started].start(ctx); err != nil {
+			// ctx may be why start failed (deadline), so the rollback gets its own.
+			stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), hookTimeout)
+			defer cancel()
+			return errors.Join(err, a.Stop(stopCtx))
 		}
 		a.started++
 	}
@@ -61,10 +94,8 @@ func (a *App) Start(ctx context.Context) error {
 func (a *App) Stop(ctx context.Context) error {
 	var errs []error
 	for ; a.started > 0; a.started-- {
-		if f := a.hooks[a.started-1].OnStop; f != nil {
-			if err := f(ctx); err != nil {
-				errs = append(errs, err)
-			}
+		if err := a.hooks[a.started-1].stop(ctx); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)

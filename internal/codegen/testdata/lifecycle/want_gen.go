@@ -12,7 +12,7 @@ func NewApp() (*solder.App, error) {
 	app := solder.New()
 	logger := NewLogger(app)
 	server := NewServer(logger)
-	app.Append(solder.Hook{OnStart: server.Start, OnStop: server.Stop})
+	app.AppendService(server)
 	if err := Announce(logger); err != nil {
 		return nil, err
 	}

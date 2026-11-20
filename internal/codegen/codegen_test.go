@@ -15,8 +15,8 @@ var update = flag.Bool("update", false, "rewrite the want_* golden files")
 
 // Each testdata/<case> is copied into a temporary module example.com/app
 // that requires this repository. A case has want_err.txt when generation
-// must fail; otherwise want_gen.go is the generated file and want_out.txt the
-// output of `go run .` with it.
+// must fail; otherwise want_gen.go is the generated file, want_graph.mmd its
+// `solder graph` output and want_out.txt the output of `go run .`.
 func TestGolden(t *testing.T) {
 	root, err := filepath.Abs("../..")
 	if err != nil {
@@ -56,6 +56,11 @@ func TestGolden(t *testing.T) {
 				t.Fatalf("got %d files, want 1", len(files))
 			}
 			golden(t, filepath.Join(src, "want_gen.go"), files[0].Content)
+			graph, err := Graph(dir, "./...")
+			if err != nil {
+				t.Fatalf("graph: %v", err)
+			}
+			golden(t, filepath.Join(src, "want_graph.mmd"), []byte(graph))
 			write(t, files[0].Path, files[0].Content)
 			cmd := exec.Command("go", "run", ".")
 			cmd.Dir = dir
