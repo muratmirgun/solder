@@ -1,0 +1,18 @@
+%% injector NewPairApp (inject.go:10:6)
+flowchart LR
+  n1["input name string"]
+  n2["greet.NewEnglish"]
+  n1 --> n2
+  n3["supply Prefix(#quot;> #quot;)"]
+  n4["main.Shout"]
+  n2 --> n4
+  n3 --> n4
+  n5["main.Loud"]
+  n4 --> n5
+  n6["main.NewInner"]
+  n5 --> n6
+  n7["main.NewPair"]
+  n4 --> n7
+  n6 --> n7
+  n7 --> result((NewPairApp))
+

@@ -18,9 +18,11 @@ little as possible to startup.
 - Generated code is what a careful person would write by hand: direct
   function calls, local variables, no maps, no interfaces, no closures, no
   `reflect`. It allocates only what the user's constructors allocate.
-- The runtime (`App`) allocates once per app (the `App` and its hook
-  slice). `Start`, `Stop` and successful hook runs allocate nothing; a test
-  enforces this with `testing.AllocsPerRun`.
+- The runtime allocates once per app: the `App`, which embeds room for the
+  first 8 hooks. `solder.Lifecycled` registers hooks with
+  `App.AppendService`, which calls Start/Stop through interfaces instead of
+  method-value closures, so it allocates nothing. `Start` and `Stop`
+  allocate nothing. Tests enforce both with `testing.AllocsPerRun`.
 - The generator, not the runtime, does all checking: missing dependencies,
   cycles, duplicate providers and type mismatches are generation errors.
 - Every performance claim in the README or a post comes from a benchmark in

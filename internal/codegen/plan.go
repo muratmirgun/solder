@@ -38,17 +38,16 @@ const (
 	sCall                   // [out[, err] :=] fn(args)
 	sSupply                 // out := expr
 	sGroup                  // out := []T{elems}
-	sHook                   // app.Append(solder.Hook{...})
+	sHook                   // app.AppendService(out)
 )
 
 type step struct {
-	kind        stepKind
-	fn          *fn
-	args        []arg
-	out         *variable
-	supply      *producer
-	elems       []ref
-	start, stop bool
+	kind   stepKind
+	fn     *fn
+	args   []arg
+	out    *variable
+	supply *producer
+	elems  []ref
 }
 
 type plan struct {
@@ -194,7 +193,7 @@ func (pr *planner) call(f *fn) (*variable, error) {
 	v := &variable{typ: f.result}
 	pr.pl.steps = append(pr.pl.steps, step{kind: sCall, fn: f, args: args, out: v})
 	if f.start || f.stop {
-		pr.pl.steps = append(pr.pl.steps, step{kind: sHook, out: v, start: f.start, stop: f.stop})
+		pr.pl.steps = append(pr.pl.steps, step{kind: sHook, out: v})
 	}
 	pr.memo[f] = ref{v: v}
 	return v, nil

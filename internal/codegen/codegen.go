@@ -28,6 +28,23 @@ type File struct {
 // a solder_gen.go for every package that has injectors. Packages that fail
 // are reported in the error; the files of the others are still returned.
 func Generate(dir string, patterns ...string) ([]File, error) {
+	pps, err := loadPlans(dir, patterns)
+	var files []File
+	errs := []error{err}
+	for _, pp := range pps {
+		src, err := emit(pp.pkg, pp.plans)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		files = append(files, File{Path: filepath.Join(pp.outDir, "solder_gen.go"), Content: src})
+	}
+	return files, errors.Join(errs...)
+}
+
+// loadPlans plans the injectors of every package matching patterns. Packages
+// that fail are reported in the error; the plans of the others are returned.
+func loadPlans(dir string, patterns []string) ([]*pkgPlans, error) {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
@@ -40,19 +57,19 @@ func Generate(dir string, patterns ...string) ([]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	var files []File
+	var out []*pkgPlans
 	var errs []error
 	for _, pkg := range roots {
-		f, err := genPackage(ld, pkg)
+		pp, err := planPackage(ld, pkg)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		if f != nil {
-			files = append(files, *f)
+		if pp != nil {
+			out = append(out, pp)
 		}
 	}
-	return files, errors.Join(errs...)
+	return out, errors.Join(errs...)
 }
 
 type loader struct {
@@ -119,7 +136,15 @@ type injector struct {
 	pos   string
 }
 
-func genPackage(ld *loader, pkg *packages.Package) (*File, error) {
+// pkgPlans is the planned injectors of one package.
+type pkgPlans struct {
+	pkg    *packages.Package
+	outDir string
+	plans  []*plan
+}
+
+// planPackage plans every injector in pkg; nil if it has none.
+func planPackage(ld *loader, pkg *packages.Package) (*pkgPlans, error) {
 	var injs []*injector
 	var outDir string
 	for _, f := range pkg.Syntax {
@@ -165,11 +190,7 @@ func genPackage(ld *loader, pkg *packages.Package) (*File, error) {
 	if len(errs) > 0 {
 		return nil, errors.Join(errs...)
 	}
-	src, err := emit(pkg, plans)
-	if err != nil {
-		return nil, err
-	}
-	return &File{Path: filepath.Join(outDir, "solder_gen.go"), Content: src}, nil
+	return &pkgPlans{pkg: pkg, outDir: outDir, plans: plans}, nil
 }
 
 // buildCall returns the solder.Build call if fd's body is exactly

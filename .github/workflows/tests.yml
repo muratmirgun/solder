@@ -16,3 +16,17 @@ jobs:
         run: test -z "$(gofmt -s -l . | grep -v testdata)"
       - run: go vet ./...
       - run: go test -race ./...
+  bench:
+    # Keeps the fx comparison compiling and the generated bench code fresh.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.x
+      - run: go build -o "$RUNNER_TEMP/solder" ./cmd/solder
+      - working-directory: bench
+        run: |
+          "$RUNNER_TEMP/solder" check ./...
+          go vet ./...
+          go test -run . -bench . -benchtime 1x ./...

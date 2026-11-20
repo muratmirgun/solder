@@ -2,6 +2,7 @@
 //
 //	solder gen [packages]    write solder_gen.go for each package with injectors
 //	solder check [packages]  report errors and out-of-date files, write nothing
+//	solder graph [packages]  print each injector's dependency graph as Mermaid
 //
 // Packages default to ".".
 package main
@@ -16,8 +17,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 || (os.Args[1] != "gen" && os.Args[1] != "check") {
-		fmt.Fprintln(os.Stderr, "usage: solder gen|check [packages]")
+	if len(os.Args) < 2 || (os.Args[1] != "gen" && os.Args[1] != "check" && os.Args[1] != "graph") {
+		fmt.Fprintln(os.Stderr, "usage: solder gen|check|graph [packages]")
 		os.Exit(2)
 	}
 	os.Exit(run(os.Args[1], os.Args[2:]))
@@ -31,6 +32,15 @@ func run(cmd string, patterns []string) int {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "solder:", err)
 		return 1
+	}
+	if cmd == "graph" {
+		out, err := codegen.Graph(wd, patterns...)
+		fmt.Print(out)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		return 0
 	}
 	files, genErr := codegen.Generate(wd, patterns...)
 	code := 0

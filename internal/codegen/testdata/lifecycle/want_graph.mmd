@@ -1,0 +1,11 @@
+%% injector NewApp (inject.go:7:6)
+flowchart LR
+  n1["solder.App"]
+  n2["main.NewLogger"]
+  n1 --> n2
+  n3["main.NewServer"]
+  n2 --> n3
+  n3 -.->|hooks| n1
+  n4["main.Announce"]
+  n2 --> n4
+

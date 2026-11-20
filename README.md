@@ -67,6 +67,7 @@ go install github.com/muratmirgun/solder/cmd/solder@latest
 ```shell
 solder gen ./...    # write solder_gen.go files
 solder check ./...  # CI: fail on errors or out-of-date files
+solder graph ./...  # print the dependency graph as Mermaid
 ```
 
 ## Features (v0.1 target)
@@ -80,14 +81,25 @@ solder check ./...  # CI: fail on errors or out-of-date files
 | Interface binding, plain values | `Bind[I, T]()`, `Supply` | ✅ |
 | Run code at startup | `Invoke` | ✅ |
 | Test overrides, private providers, flattened groups | — | later |
-| Benchmarks vs fx, `solder graph` | — | planned |
+| Dependency graph as Mermaid | `solder graph` | ✅ |
+| Benchmarks vs fx | [bench/](bench/) | ✅ |
 
 ## Performance
 
-solder only runs at startup and shutdown; it adds nothing to the request
-path. The generated code allocates only what your constructors allocate, and
-starting plus stopping 8 hooks takes ~25 ns with **0 allocations**
-(`go test -bench . .`). Benchmarks against fx are on the way. See
+Same app, built with solder and with fx: 12 components, 3 with lifecycle
+hooks ([bench/](bench/)). One op = build the graph, start it, stop it.
+
+| | solder | fx v1.24 | |
+|---|---|---|---|
+| time / op | 127 ns | 113 µs | ~890× faster |
+| allocs / op | 12 | 2424 | ~200× fewer |
+| memory / op | 464 B | 140 KB | ~300× less |
+| stripped binary | 1.6 MB | 4.4 MB | 2.7× smaller |
+
+solder's 12 allocations are the 11 constructors' own structs plus the
+`App`; solder itself adds nothing else, and nothing at all to the request
+path. Measured on an Apple M4 Max, Go 1.27; reproduce with
+`cd bench && go test -bench . -benchmem && ./size.sh`. See
 [ADR 0005](docs/adr/0005-performance.md).
 
 ## Design

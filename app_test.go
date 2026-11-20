@@ -141,3 +141,62 @@ func BenchmarkStartStop(b *testing.B) {
 		_ = app.Stop(ctx)
 	}
 }
+
+type svc struct {
+	r    *recorder
+	name string
+}
+
+func (s *svc) Start(context.Context) error {
+	s.r.calls = append(s.r.calls, "start "+s.name)
+	return nil
+}
+func (s *svc) Stop(context.Context) error { s.r.calls = append(s.r.calls, "stop "+s.name); return nil }
+
+type startOnly struct{ r *recorder }
+
+func (s startOnly) Start(context.Context) error {
+	s.r.calls = append(s.r.calls, "start only")
+	return nil
+}
+
+func TestAppendService(t *testing.T) {
+	var r recorder
+	app := New()
+	app.AppendService(&svc{&r, "a"})
+	app.AppendService(startOnly{&r})
+	app.Append(r.hook("b", false, false))
+	ctx := context.Background()
+	if err := app.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Stop(ctx); err != nil {
+		t.Fatal(err)
+	}
+	r.want(t, "start a", "start only", "start b", "stop b", "stop a")
+}
+
+// ADR 0005: an app with up to 8 service hooks allocates only the App itself.
+func TestServiceAppOneAlloc(t *testing.T) {
+	services := make([]*noopSvc, 8)
+	for i := range services {
+		services[i] = &noopSvc{}
+	}
+	ctx := context.Background()
+	allocs := testing.AllocsPerRun(100, func() {
+		app := New()
+		for _, s := range services {
+			app.AppendService(s)
+		}
+		_ = app.Start(ctx)
+		_ = app.Stop(ctx)
+	})
+	if allocs != 1 {
+		t.Fatalf("allocs per run = %v, want 1 (the App)", allocs)
+	}
+}
+
+type noopSvc struct{ _ byte } // non-zero size so each one is a distinct pointer
+
+func (*noopSvc) Start(context.Context) error { return nil }
+func (*noopSvc) Stop(context.Context) error  { return nil }

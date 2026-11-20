@@ -182,14 +182,7 @@ func (e *emitter) step(w io.Writer, pl *plan, s step) {
 		}
 		fmt.Fprintf(w, "%s := %s{%s}\n", s.out.name, e.typ(s.out.typ), strings.Join(elems, ", "))
 	case sHook:
-		var fields []string
-		if s.start {
-			fields = append(fields, "OnStart: "+s.out.name+".Start")
-		}
-		if s.stop {
-			fields = append(fields, "OnStop: "+s.out.name+".Stop")
-		}
-		fmt.Fprintf(w, "%s.Append(%s.Hook{%s})\n", pl.app.name, e.solder(), strings.Join(fields, ", "))
+		fmt.Fprintf(w, "%s.AppendService(%s)\n", pl.app.name, s.out.name)
 	case sCall:
 		call := e.fn(s.fn.obj) + "(" + e.args(pl, s.args) + ")"
 		switch {

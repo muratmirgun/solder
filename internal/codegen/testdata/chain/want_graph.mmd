@@ -1,0 +1,9 @@
+%% injector NewServerFor (inject.go:8:6)
+flowchart LR
+  n1["input cfg main.Config"]
+  n2["main.NewDB"]
+  n1 --> n2
+  n3["main.NewServer"]
+  n2 --> n3
+  n3 --> result((NewServerFor))
+
